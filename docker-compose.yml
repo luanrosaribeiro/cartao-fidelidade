@@ -1,0 +1,60 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_cartao_fidelidade
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cartao_fidelidade
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: ./api
+    container_name: api_cartao_fidelidade
+    restart: always
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: cartao_fidelidade
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./api:/usr/src/app
+
+  admin:
+    build: ./admin
+    container_name: admin_cartao_fidelidade
+    restart: always
+    environment:
+      API_URL: http://api:3000
+    depends_on:
+      - api
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./admin:/usr/src/app
+
+  cliente:
+    build: ./cliente
+    container_name: cliente_cartao_fidelidade
+    restart: always
+    environment:
+      API_URL: http://api:3000
+    depends_on:
+      - api
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./cliente:/usr/src/app
+
+volumes:
+  postgres_data:
