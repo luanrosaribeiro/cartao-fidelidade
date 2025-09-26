@@ -1,0 +1,207 @@
+const express = require('express');
+const pool = require('../../db');
+const router = express.Router();
+const { requireLogin } = require('../middleware/auth'); 
+
+router.post('/', requireLogin, async (req, res) => {
+  const { nome, cpf, telefone, email, senha } = req.body;
+
+  if (!nome || !cpf || !telefone || !email || !senha) {
+    return res.status(400).json({ success: false, error: 'Todos os campos s�o obrigat�rios.' });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    // Insere usu�rio
+    const usuarioRes = await client.query(`
+      INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
+      VALUES ($1, $2, $3, $4, $5, 'CLIENTE')
+      RETURNING id
+    `, [nome, cpf, telefone, email, senha]);
+
+    const id_usuario = usuarioRes.rows[0].id;
+
+    // Cria registro na tabela cliente
+    await client.query(`
+      INSERT INTO cliente (id_usuario)
+      VALUES ($1)
+    `, [id_usuario]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    let msg = 'Erro interno do servidor.';
+    if (err.code === '23505') { // Unique violation
+      msg = 'CPF ou email j� cadastrado.';
+    }
+    res.status(500).json({ success: false, error: msg });
+  } finally {
+    client.release();
+  }
+});
+
+// Listar todos clientes
+router.get('/', requireLogin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT u.id, u.nome, u.cpf, u.telefone, u.email
+      FROM usuario u
+      JOIN cliente c ON c.id_usuario = u.id
+      ORDER BY u.nome ASC
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+// Buscar cliente por ID
+router.get('/', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(`
+      SELECT u.id, u.nome, u.cpf, u.telefone, u.email
+      FROM usuario u
+      JOIN cliente c ON c.id_usuario = u.id
+      WHERE u.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+// Atualizar cliente
+router.put('/:id', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  const { nome, telefone, email, senha } = req.body;
+
+  const client = await pool.connect();
+
+  try {
+    // Atualiza usu�rio
+    const result = await client.query(`
+      UPDATE usuario
+      SET nome = $1, telefone = $2, email = $3, senha = $4
+      WHERE id = $5 AND tipo_usuario = 'CLIENTE'
+      RETURNING id
+    `, [nome, telefone, email, senha, id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    let msg = 'Erro interno do servidor.';
+    if (err.code === '23505') {
+      msg = 'Email j� cadastrado.';
+    }
+    res.status(500).json({ success: false, error: msg });
+  } finally {
+    client.release();
+  }
+});
+
+// Deletar cliente
+router.delete('/:id', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    // Deleta usu�rio (cascata apagar� o cliente)
+    const result = await client.query(`
+      DELETE FROM usuario
+      WHERE id = $1 AND tipo_usuario = 'CLIENTE'
+    `, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+// Registrar Refei��o
+router.post('/:id/registrar', requireLogin, async (req, res) => {
+  const { id } = req.params; // id_cliente
+  const client = await pool.connect();
+
+  try {
+    const clienteRes = await client.query('SELECT id FROM cliente WHERE id = $1', [id]);
+    if (clienteRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+    }
+    await client.query(`
+      INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
+      VALUES ($1, 1, FALSE)
+    `, [id]);
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+// Resgatar cortesia continua igual
+router.post('/:id/resgatar', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const countRes = await client.query(`
+      SELECT COUNT(*) AS almocos_acumulados
+      FROM refeicao
+      WHERE id_cliente = $1
+        AND cortesia = FALSE
+        AND data >= CURRENT_DATE - INTERVAL '30 days'
+    `, [id]);
+
+    const almocos_acumulados = parseInt(countRes.rows[0].almocos_acumulados);
+
+    if (almocos_acumulados >= 10) {
+      await client.query(`
+        INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
+        VALUES ($1, 1, TRUE)
+      `, [id]);
+
+      return res.json({ success: true });
+    } else {
+      return res.status(400).json({ success: false, error: 'Cliente ainda n�o tem direito � cortesia.' });
+    }
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+module.exports = router;
