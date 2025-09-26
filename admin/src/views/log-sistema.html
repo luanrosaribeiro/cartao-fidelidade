@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log do Sistema - Sistema de Fidelidade</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-image: url('./assets/images/img1.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #f4f4f4;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: #40159f;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(64, 29, 29, 0.1);
+        }
+        .secao {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        h1 { 
+            color: #d0d7df; 
+            text-align: center; 
+        }
+        h2 { 
+            color: #e4e7ea; 
+            padding-bottom: 5px; 
+        }
+        .botoes-navegacao-log {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-navegacao, .btn-voltar {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+        
+        .btn-navegacao {
+            background-color: #007bff;
+        }
+
+        .btn-voltar {
+            background-color: #dc3545;
+        }
+        
+        .btn-navegacao:hover, .btn-voltar:hover {
+            opacity: 0.8;
+        }
+
+        #log-sistema {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        #btn-mostrar-mais {
+            width: 100%;
+            margin-top: 10px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .feedback { 
+            padding: 15px; 
+            margin-top: 10px; 
+            border-radius: 5px; 
+        }
+        .sucesso { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .erro { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .info { 
+            background-color: #e2e3e5; 
+            color: #383d41; 
+            border: 1px solid #d6d8db; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Fidelidade</h1>
+
+        <div class="secao">
+            <h2>Log do Sistema</h2>
+            <div id="log-sistema"></div>
+            <button id="btn-mostrar-mais" style="display:none;">Mostrar Mais</button>
+        </div>
+        
+        <div class="secao botoes-navegacao-log">
+            <a href="/gerenciar-cartao" class="btn-navegacao">Gerenciar Cartão</a>
+            <a href="/dashboard" class="btn-voltar">VOLTAR</a>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+    <script src="../controler/log-sistema.js"></script>
+</body>
+</html>
