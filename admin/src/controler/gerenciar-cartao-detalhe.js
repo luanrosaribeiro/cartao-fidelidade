@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnResgatar = document.getElementById('btn-resgatar');
     const btnEditar = document.getElementById('btn-editar');
     const btnExcluir = document.getElementById('btn-excluir');
-
     const btnMostrarTodos = document.getElementById('btn-mostrar-todos');
 
     const modalBuscaNome = document.getElementById('modal-busca-nome');
@@ -69,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Nome</th>
                     <th>CPF</th>
                     <th>Telefone</th>
-                    <th>Almoços</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -83,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${c.nome}</td>
                 <td>${c.cpf}</td>
                 <td>${c.telefone}</td>
-                <td>${c.almoços_acumulados}</td>
             `;
             linha.addEventListener('click', () => {
                 exibirDadosCliente(c);
@@ -98,37 +95,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function exibirDadosCliente(cliente) {
         clienteAtual = cliente;
-        let dataInicioFormatada = 'N/A';
-        let dataExpiraFormatada = 'N/A';
-        if (cliente.data_inicio_acm) {
-            const dataInicioObj = new Date(cliente.data_inicio_acm);
-            const dataExpiraObj = new Date(dataInicioObj);
-            dataExpiraObj.setDate(dataExpiraObj.getDate() + 30);
-            dataInicioFormatada = dataInicioObj.toLocaleDateString('pt-BR');
-            dataExpiraFormatada = dataExpiraObj.toLocaleDateString('pt-BR');
-        }
         const statusMessage = `
             **ID:** ${cliente.id}<br>
             **Nome:** ${cliente.nome}<br>
             **CPF:** ${cliente.cpf}<br>
             **Telefone:** ${cliente.telefone}<br>
-            **Almoços Acumulados:** ${cliente.almoços_acumulados} de 10<br>
-            **Início do Ciclo:** ${dataInicioFormatada}<br>
-            **Ciclo expira em:** ${dataExpiraFormatada}
+            **Email:** ${cliente.email || 'Não informado'}
         `;
         showStatus(statusMessage, 'info');
         btnRegistrar.disabled = false;
-        btnResgatar.disabled = cliente.almoços_acumulados < 10;
+        btnResgatar.disabled = false;
         btnEditar.disabled = false;
         btnExcluir.disabled = false;
     }
 
     async function buscarCliente(id) {
         try {
-            const response = await fetch(API_URL + `/api/clientes/${id}`);
+            const response = await fetch(`/clientes/${id}`, {
+                credentials: 'include'
+            });
             const data = await response.json();
             if (response.ok) {
-                exibirDadosCliente(data);
+                exibirDadosCliente(data.data);
             } else {
                 showStatus(`Erro: ${data.error}`, 'erro');
                 resetarStatusCliente();
@@ -146,14 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const response = await fetch(API_URL + `/api/clientes/buscar-nome/${nome}`);
-            const clientes = await response.json();
+            const response = await fetch(`/clientes/buscar-nome/${encodeURIComponent(nome)}`, {
+                credentials: 'include'
+            });
+            const result = await response.json();
             if (response.ok) {
-                renderizarTabelaClientes(resultadosBuscaDiv, clientes, () => modalBuscaNome.style.display = 'none');
+                renderizarTabelaClientes(resultadosBuscaDiv, result.data, () => modalBuscaNome.style.display = 'none');
                 modalBuscaNome.style.display = 'block';
             } else {
-                showStatus(`Erro na busca: ${clientes.error}`, 'erro');
-                resultadosBuscaDiv.innerHTML = `<span class="erro">${clientes.error}</span>`;
+                showStatus(`Erro na busca: ${result.error}`, 'erro');
+                resultadosBuscaDiv.innerHTML = `<span class="erro">${result.error}</span>`;
                 modalBuscaNome.style.display = 'block';
             }
         } catch (error) {
@@ -166,10 +156,13 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRegistrar.addEventListener('click', async () => {
         if (!clienteAtual) return;
         try {
-            const response = await fetch(API_URL + `/api/clientes/${clienteAtual.id}/registrar`, { method: 'POST' });
+            const response = await fetch(`/clientes/${clienteAtual.id}/registrar`, { 
+                method: 'POST',
+                credentials: 'include'
+            });
             const data = await response.json();
             if (response.ok) {
-                showStatus(data.mensagem, 'sucesso');
+                showStatus('Refeição registrada com sucesso!', 'sucesso');
                 logEvent(`Almoço registrado para ${clienteAtual.nome} (ID: ${clienteAtual.id}).`, 'sucesso');
                 buscarCliente(clienteAtual.id);
             } else {
@@ -184,10 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
     btnResgatar.addEventListener('click', async () => {
         if (!clienteAtual) return;
         try {
-            const response = await fetch(API_URL + `/api/clientes/${clienteAtual.id}/resgatar`, { method: 'POST' });
+            const response = await fetch(`/clientes/${clienteAtual.id}/resgatar`, { 
+                method: 'POST',
+                credentials: 'include'
+            });
             const data = await response.json();
             if (response.ok) {
-                showStatus(data.mensagem, 'sucesso');
+                showStatus('Cortesia resgatada com sucesso!', 'sucesso');
                 logEvent(`Cliente ${clienteAtual.nome} (ID: ${clienteAtual.id}) resgatou a cortesia.`, 'sucesso');
                 buscarCliente(clienteAtual.id);
             } else {
@@ -212,7 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmacao = confirm(`Tem certeza que deseja excluir o cliente ${clienteAtual.nome} (ID: ${clienteAtual.id})?`);
         if (confirmacao) {
             try {
-                const response = await fetch(API_URL + `/api/clientes/${clienteAtual.id}`, { method: 'DELETE' });
+                const response = await fetch(`/clientes/${clienteAtual.id}`, { 
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 if (response.ok) {
                     showStatus(`Cliente **${clienteAtual.nome}** (ID: ${clienteAtual.id}) excluído com sucesso.`, 'sucesso');
@@ -240,14 +239,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(API_URL + `/api/clientes/${clienteAtual.id}`, {
+            const response = await fetch(`/clientes/${clienteAtual.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ nome, telefone, email })
             });
             const data = await response.json();
             if (response.ok) {
-                showStatus(data.mensagem, 'sucesso');
+                showStatus('Cliente atualizado com sucesso!', 'sucesso');
                 logEvent(`Dados do cliente ${clienteAtual.nome} (ID: ${clienteAtual.id}) atualizados.`, 'sucesso');
                 modalEdicao.style.display = 'none';
                 buscarCliente(clienteAtual.id);
@@ -262,13 +262,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnMostrarTodos.addEventListener('click', async () => {
         try {
-            const response = await fetch(API_URL + '/api/clientes');
-            const clientes = await response.json();
+            const response = await fetch('/clientes', {
+                credentials: 'include'
+            });
+            const result = await response.json();
             if (response.ok) {
-                renderizarTabelaClientes(todosClientesLista, clientes, () => modalTodosClientes.style.display = 'none');
+                renderizarTabelaClientes(todosClientesLista, result.data, () => modalTodosClientes.style.display = 'none');
                 modalTodosClientes.style.display = 'block';
             } else {
-                showStatus(`Erro ao buscar todos os clientes: ${clientes.error}`, 'erro');
+                showStatus(`Erro ao buscar todos os clientes: ${result.error}`, 'erro');
             }
         } catch (error) {
             showStatus('Erro de conexão com o servidor.', 'erro');

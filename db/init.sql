@@ -50,13 +50,16 @@ CREATE TABLE IF NOT EXISTS refeicao (
 
 -- Seed inicial
 INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
-VALUES ('Admin Master', '00000000000', '51999999999', 'admin@restaurante.com', 'admin123', 'ADMIN')
-ON CONFLICT DO NOTHING;
+VALUES ('Admin Master', '00000000000', '51999999999', 'admin@restaurante.com', 'admin123', 'ADMIN');
+
+INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
+values ('Padrao', '00011122233', '5399966334455', 'padrao@caixa.com', '123456', 'CAIXA');
 
 INSERT INTO administrador (id_usuario)
-SELECT id FROM usuario WHERE email = 'admin@restaurante.com'
-ON CONFLICT DO NOTHING;
+SELECT id FROM usuario WHERE email = 'admin@restaurante.com';
 
 INSERT INTO restaurante (nome, endereco, cnpj, telefone)
-VALUES ('Restaurante Central', 'Rua Principal, 123', '12345678000199', '5133333333')
-ON CONFLICT DO NOTHING;
+VALUES ('Restaurante Central', 'Rua Principal, 123', '12345678000199', '5133333333');
+
+INSERT INTO caixa (id_restaurante, id_usuario)
+VALUES (1, 6);

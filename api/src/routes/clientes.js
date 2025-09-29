@@ -6,19 +6,19 @@ const { requireLogin } = require('../middleware/auth');
 router.post('/', requireLogin, async (req, res) => {
   const { nome, cpf, telefone, email, senha } = req.body;
 
-  if (!nome || !cpf || !telefone || !email || !senha) {
-    return res.status(400).json({ success: false, error: 'Todos os campos s�o obrigat�rios.' });
+  if (!nome || !cpf || !telefone || !email) {
+    return res.status(400).json({ success: false, error: 'Todos os campos são obrigatórios.' });
   }
 
   const client = await pool.connect();
 
   try {
-    // Insere usu�rio
+    // Insere usuário
     const usuarioRes = await client.query(`
       INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
-      VALUES ($1, $2, $3, $4, $5, 'CLIENTE')
+      VALUES ($1, $2, $3, $4, '123456', 'CLIENTE')
       RETURNING id
-    `, [nome, cpf, telefone, email, senha]);
+    `, [nome, cpf, telefone, email]);
 
     const id_usuario = usuarioRes.rows[0].id;
 
@@ -60,8 +60,31 @@ router.get('/', requireLogin, async (req, res) => {
   }
 });
 
+//Buscar por nome
+router.get('/buscar-nome/:nome', requireLogin, async (req, res) => {
+  const { nome } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(`
+      SELECT u.id, u.nome, u.cpf, u.telefone, u.email
+      FROM usuario u
+      JOIN cliente c ON c.id_usuario = u.id
+      WHERE LOWER(u.nome) LIKE LOWER($1)
+      ORDER BY u.nome ASC
+    `, [`%${nome}%`]);
+
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
 // Buscar cliente por ID
-router.get('/', requireLogin, async (req, res) => {
+router.get('/:id', requireLogin, async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
 
@@ -74,7 +97,7 @@ router.get('/', requireLogin, async (req, res) => {
     `, [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
     }
 
     res.json({ success: true, data: result.rows[0] });
@@ -89,21 +112,21 @@ router.get('/', requireLogin, async (req, res) => {
 // Atualizar cliente
 router.put('/:id', requireLogin, async (req, res) => {
   const { id } = req.params;
-  const { nome, telefone, email, senha } = req.body;
+  const { nome, telefone, email } = req.body;
 
   const client = await pool.connect();
 
   try {
-    // Atualiza usu�rio
+    // Atualiza usuário
     const result = await client.query(`
       UPDATE usuario
-      SET nome = $1, telefone = $2, email = $3, senha = $4
-      WHERE id = $5 AND tipo_usuario = 'CLIENTE'
+      SET nome = $1, telefone = $2, email = $3
+      WHERE id = $4 AND tipo_usuario = 'CLIENTE'
       RETURNING id
-    `, [nome, telefone, email, senha, id]);
+    `, [nome, telefone, email, id]);
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
     }
 
     res.json({ success: true });
@@ -111,7 +134,7 @@ router.put('/:id', requireLogin, async (req, res) => {
     console.error(err);
     let msg = 'Erro interno do servidor.';
     if (err.code === '23505') {
-      msg = 'Email j� cadastrado.';
+      msg = 'Email já cadastrado.';
     }
     res.status(500).json({ success: false, error: msg });
   } finally {
@@ -125,7 +148,7 @@ router.delete('/:id', requireLogin, async (req, res) => {
   const client = await pool.connect();
 
   try {
-    // Deleta usu�rio (cascata apagar� o cliente)
+    // Deleta usuário (cascata apagará o cliente)
     const result = await client.query(`
       DELETE FROM usuario
       WHERE id = $1 AND tipo_usuario = 'CLIENTE'
@@ -144,7 +167,7 @@ router.delete('/:id', requireLogin, async (req, res) => {
   }
 });
 
-// Registrar Refei��o
+// Registrar Refeição
 router.post('/:id/registrar', requireLogin, async (req, res) => {
   const { id } = req.params; // id_cliente
   const client = await pool.connect();
@@ -156,7 +179,7 @@ router.post('/:id/registrar', requireLogin, async (req, res) => {
     }
     await client.query(`
       INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
-      VALUES ($1, 1, FALSE)
+      VALUES ($1, 2, FALSE)
     `, [id]);
 
     return res.json({ success: true });

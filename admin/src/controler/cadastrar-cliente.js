@@ -79,14 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(API_URL + '/api/clientes', {
+            const response = await fetch('/clientes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ nome, cpf, telefone, email })
             });
             const data = await response.json();
             if (response.ok) {
-                showStatus(data.mensagem, 'sucesso');
+                showStatus(data.mensagem || 'Cliente cadastrado com sucesso!', 'sucesso');
                 clearInputs();
             } else {
                 showStatus(`Erro: ${data.error}`, 'erro');
