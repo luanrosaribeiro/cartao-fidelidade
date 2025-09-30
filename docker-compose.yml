@@ -53,15 +53,14 @@ services:
     container_name: cliente_cartao_fidelidade
     restart: always
     environment:
-      API_URL: http://api:3000
+      REACT_APP_API_URL: http://api:3000
     depends_on:
       - api
     ports:
-      - "3002:3002"
+      - "3002:3000"
     volumes:
       - ./cliente:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run dev
+    command: npm start
 
 volumes:
   postgres_data:
