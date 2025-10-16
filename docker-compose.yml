@@ -60,6 +60,7 @@ services:
       - "3002:3000"
     volumes:
       - ./cliente:/usr/src/app
+      - /usr/src/app/node_modules 
     command: npm start
 
 volumes:

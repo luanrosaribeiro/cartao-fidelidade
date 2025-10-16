@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const clientesRouter = require('./src/routes/clientes');
 const authRouter = require('./src/routes/auth');
+const administradorRouter = require('./src/routes/administrador');
 
 const app = express();
 const PORT = 3000;
@@ -40,6 +41,7 @@ const requireLogin = (req, res, next) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/clientes', requireLogin, clientesRouter);
+app.use('/api/administrador', requireLogin, administradorRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);

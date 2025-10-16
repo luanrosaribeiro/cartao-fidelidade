@@ -3,37 +3,32 @@ const pool = require('../../db');
 const router = express.Router();
 const { requireLogin } = require('../middleware/auth'); 
 
+//Rota para cadastro de cliente
 router.post('/', requireLogin, async (req, res) => {
-  const { nome, cpf, telefone, email, senha } = req.body;
-
+  var { nome, cpf, telefone, email} = req.body;
   if (!nome || !cpf || !telefone || !email) {
     return res.status(400).json({ success: false, error: 'Todos os campos são obrigatórios.' });
   }
-
-  const client = await pool.connect();
-
+  var client = await pool.connect();
   try {
-    // Insere usuário
-    const usuarioRes = await client.query(`
-      INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
-      VALUES ($1, $2, $3, $4, '123456', 'CLIENTE')
-      RETURNING id
-    `, [nome, cpf, telefone, email]);
-
-    const id_usuario = usuarioRes.rows[0].id;
-
-    // Cria registro na tabela cliente
-    await client.query(`
-      INSERT INTO cliente (id_usuario)
-      VALUES ($1)
-    `, [id_usuario]);
-
-    res.json({ success: true });
+    var usuario = await client.query(
+      `
+        INSERT INTO usuario (nome, cpf, telefone, email, senha, tipo_usuario)
+        VALUES ($1, $2, $3, $4, '123456', 'CLIENTE')
+        RETURNING id
+      `, [nome, cpf, telefone, email]);
+      var id_usuario = usuario.rows[0].id;
+      await client.query(
+        `
+          INSERT INTO cliente (id_usuario)
+          VALUES ($1)
+        `, [id_usuario]); 
+        res.json({ success: true });
   } catch (err) {
     console.error(err);
     let msg = 'Erro interno do servidor.';
     if (err.code === '23505') { // Unique violation
-      msg = 'CPF ou email j� cadastrado.';
+      msg = 'CPF ou email já cadastrado.';
     }
     res.status(500).json({ success: false, error: msg });
   } finally {
@@ -43,9 +38,9 @@ router.post('/', requireLogin, async (req, res) => {
 
 // Listar todos clientes
 router.get('/', requireLogin, async (req, res) => {
-  const client = await pool.connect();
+  var client = await pool.connect();
   try {
-    const result = await client.query(`
+    var result = await client.query(`
       SELECT u.id, u.nome, u.cpf, u.telefone, u.email
       FROM usuario u
       JOIN cliente c ON c.id_usuario = u.id
@@ -62,11 +57,11 @@ router.get('/', requireLogin, async (req, res) => {
 
 //Buscar por nome
 router.get('/buscar-nome/:nome', requireLogin, async (req, res) => {
-  const { nome } = req.params;
-  const client = await pool.connect();
+  var { nome } = req.params;
+  var client = await pool.connect();
 
   try {
-    const result = await client.query(`
+    var result = await client.query(`
       SELECT u.id, u.nome, u.cpf, u.telefone, u.email
       FROM usuario u
       JOIN cliente c ON c.id_usuario = u.id
@@ -85,11 +80,11 @@ router.get('/buscar-nome/:nome', requireLogin, async (req, res) => {
 
 // Buscar cliente por ID
 router.get('/:id', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  const client = await pool.connect();
+  var { id } = req.params;
+  var client = await pool.connect();
 
   try {
-    const result = await client.query(`
+    var result = await client.query(`
       SELECT u.id, u.nome, u.cpf, u.telefone, u.email
       FROM usuario u
       JOIN cliente c ON c.id_usuario = u.id
@@ -111,14 +106,14 @@ router.get('/:id', requireLogin, async (req, res) => {
 
 // Atualizar cliente
 router.put('/:id', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  const { nome, telefone, email } = req.body;
+  var { id } = req.params;
+  var { nome, telefone, email } = req.body;
 
-  const client = await pool.connect();
+  var client = await pool.connect();
 
   try {
     // Atualiza usuário
-    const result = await client.query(`
+    var result = await client.query(`
       UPDATE usuario
       SET nome = $1, telefone = $2, email = $3
       WHERE id = $4 AND tipo_usuario = 'CLIENTE'
@@ -144,12 +139,12 @@ router.put('/:id', requireLogin, async (req, res) => {
 
 // Deletar cliente
 router.delete('/:id', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  const client = await pool.connect();
+  var { id } = req.params;
+  var client = await pool.connect();
 
   try {
     // Deleta usuário (cascata apagará o cliente)
-    const result = await client.query(`
+    var result = await client.query(`
       DELETE FROM usuario
       WHERE id = $1 AND tipo_usuario = 'CLIENTE'
     `, [id]);
@@ -168,14 +163,14 @@ router.delete('/:id', requireLogin, async (req, res) => {
 });
 
 // Registrar Refeição
-router.post('/:id/registrar', requireLogin, async (req, res) => {
-  const { id } = req.params; // id_cliente
-  const client = await pool.connect();
+router.post('/:id/registrar', async (req, res) => {
+  var { id } = req.params;
+  var client = await pool.connect();
 
   try {
-    const clienteRes = await client.query('SELECT id FROM cliente WHERE id = $1', [id]);
+    var clienteRes = await client.query('SELECT id FROM cliente WHERE id = $1', [id]);
     if (clienteRes.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
     }
     await client.query(`
       INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
@@ -192,13 +187,13 @@ router.post('/:id/registrar', requireLogin, async (req, res) => {
   }
 });
 
-// Resgatar cortesia continua igual
+// Resgatar cortesia
 router.post('/:id/resgatar', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  const client = await pool.connect();
+  var { id } = req.params;
+  var client = await pool.connect();
 
   try {
-    const countRes = await client.query(`
+    var countRes = await client.query(`
       SELECT COUNT(*) AS almocos_acumulados
       FROM refeicao
       WHERE id_cliente = $1
@@ -206,7 +201,7 @@ router.post('/:id/resgatar', requireLogin, async (req, res) => {
         AND data >= CURRENT_DATE - INTERVAL '30 days'
     `, [id]);
 
-    const almocos_acumulados = parseInt(countRes.rows[0].almocos_acumulados);
+    var almocos_acumulados = parseInt(countRes.rows[0].almocos_acumulados);
 
     if (almocos_acumulados >= 10) {
       await client.query(`
@@ -216,7 +211,7 @@ router.post('/:id/resgatar', requireLogin, async (req, res) => {
 
       return res.json({ success: true });
     } else {
-      return res.status(400).json({ success: false, error: 'Cliente ainda n�o tem direito � cortesia.' });
+      return res.status(400).json({ success: false, error: 'Cliente ainda não tem direito à cortesia.' });
     }
 
   } catch (err) {

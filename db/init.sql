@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     telefone VARCHAR(20),
     email VARCHAR(100) UNIQUE NOT NULL,
     senha VARCHAR(200) NOT NULL,
-    tipo_usuario VARCHAR(20) NOT NULL CHECK (tipo_usuario IN ('CLIENTE','CAIXA','ADMIN'))
+    tipo_usuario VARCHAR(20) NOT NULL CHECK (tipo_usuario IN ('CLIENTE','CAIXA','CAIXAMOVEL','ADMIN'))
 );
 
 CREATE TABLE IF NOT EXISTS restaurante (
@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS administrador (
 );
 
 CREATE TABLE IF NOT EXISTS caixa (
+    id SERIAL PRIMARY KEY,
+    id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
+    id_restaurante INT NOT NULL REFERENCES restaurante(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS caixamovel (
     id SERIAL PRIMARY KEY,
     id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
     id_restaurante INT NOT NULL REFERENCES restaurante(id) ON DELETE CASCADE
