@@ -9,15 +9,36 @@ const administradorRouter = require('./src/routes/administrador');
 const app = express();
 const PORT = 3000;
 
-app.use(cors({
-  origin: 'http://localhost:3001',
+const allowedOrigins = [
+  "http://localhost:3002", // Cliente
+  "http://localhost:3001"  // Admin
+];
+
+const corsConfig = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS bloqueado para esta origem: " + origin));
+    }
+  },
   credentials: true
-}));
+};
+
+app.use(cors(corsConfig));
+
+// Preflight 
+app.options('*', cors(corsConfig));
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-//Sessão configurada corretamente
+// Sessão
 app.use(session({
   secret: '11ad3ccffde67811affe77134e2712d65d637c23ef8d51b2703a347259721b3a490a42b84fd03b1fe3085435a49b05ea93227bbf134e88ca875550b289edbf88',
   resave: false,
