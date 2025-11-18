@@ -61,7 +61,7 @@ services:
     volumes:
       - ./cliente:/usr/src/app
       - /usr/src/app/node_modules 
-    command: npm start
+    command: ["sh", "-c", "CI=true npm start"]
 
 volumes:
   postgres_data:

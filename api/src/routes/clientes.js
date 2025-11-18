@@ -150,7 +150,7 @@ router.delete('/:id', requireLogin, async (req, res) => {
     `, [id]);
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, error: 'Cliente n�o encontrado.' });
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
     }
 
     res.json({ success: true });
@@ -168,10 +168,11 @@ router.post('/:id/registrar', async (req, res) => {
   var client = await pool.connect();
 
   try {
-    var clienteRes = await client.query('SELECT id FROM cliente WHERE id = $1', [id]);
+    var clienteRes = await client.query('SELECT id FROM cliente WHERE id_usuario = $1', [id]);
     if (clienteRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
     }
+    var id = clienteRes.rows[0].id;
     await client.query(`
       INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
       VALUES ($1, 2, FALSE)

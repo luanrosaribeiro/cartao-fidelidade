@@ -7,10 +7,10 @@ export default function ClientApp() {
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token") || "");
-  const [meals, setMeals] = useState([]);
-  const [selectedMeal, setSelectedMeal] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
 
+  // 🔐 Login
   async function login(e) {
     e.preventDefault();
     try {
@@ -18,49 +18,56 @@ export default function ClientApp() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario: cpf, senha: password }),
+        credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Login falhou");
+      if (!res.ok) throw new Error("Falha no login");
       const data = await res.json();
 
       if (data.success) {
         setUser(data.user);
         setView("dashboard");
-        fetchMeals();
-        notify("Bem-vindo", `Olá usuário ${data.user.id}, você está logado!`);
+        fetchClients();
+        notify("Bem-vindo", `Usuário ${data.user.id} logado com sucesso!`);
       } else {
-        alert(data.message);
+        alert(data.message || "Usuário ou senha inválidos");
       }
     } catch (err) {
-      alert("Falha no login");
+      alert("Erro ao conectar ao servidor de login.");
     }
   }
 
-
-  // Buscar refeições
-  async function fetchMeals(token) {
+  // 📋 Buscar clientes
+  async function fetchClients() {
     try {
-      const res = await fetch(`${API_URL}/meals`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API_URL}/clientes`, {
+        credentials: "include",
       });
-      if (!res.ok) throw new Error("Erro ao buscar refeições");
+      if (!res.ok) throw new Error("Erro ao buscar clientes");
       const data = await res.json();
-      setMeals(data.meals);
+      setClients(data.data || []);
     } catch (err) {
-      alert("Falha ao carregar refeições");
+      alert("Falha ao carregar clientes");
     }
   }
-  
-  // Logout
-  function logout() {
-    localStorage.removeItem("token");
-    setUser(null);
-    setToken("");
-    setView("login");
-    setMeals([]);
+
+  // 🚪 Logout
+  async function logout() {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.warn("Erro ao sair:", err);
+    } finally {
+      setUser(null);
+      setView("login");
+      setClients([]);
+    }
   }
 
-  // Notificações
+  // 🔔 Notificação
   function notify(title, body) {
     if (Notification.permission === "granted") {
       new Notification(title, { body });
@@ -71,22 +78,42 @@ export default function ClientApp() {
     }
   }
 
-  // Abrir QR Code
-  function showQR(meal) {
-    setSelectedMeal(meal);
+  // 🎟️ Mostrar QR Code
+  function showQR(client) {
+    setSelectedClient(client);
   }
 
-  // Fechar QR Code
+  // ❌ Fechar modal QR
   function closeQR() {
-    notify(
-      "Refeição registrada",
-      `${selectedMeal.name} foi marcada como consumida!`
-    );
-    setSelectedMeal(null);
+    setSelectedClient(null);
   }
 
+  // 🍽️ Registrar refeição (via botão ou QR)
+  async function registrarRefeicao(clientId) {
+    try {
+      const res = await fetch(`${API_URL}/clientes/${clientId}/registrar`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Erro ao registrar refeição");
+      const data = await res.json();
+
+      if (data.success) {
+        notify("Refeição registrada", `Cliente ${clientId} teve refeição registrada!`);
+        alert(`Refeição registrada com sucesso para o cliente ${clientId}.`);
+      } else {
+        alert(data.message || "Falha ao registrar refeição.");
+      }
+    } catch (err) {
+      alert("Erro de comunicação com o servidor.");
+    }
+  }
+
+  // 📱 Renderização
   return (
     <div className="container mt-4">
+      {/* LOGIN */}
       {view === "login" && (
         <form onSubmit={login} className="w-50 mx-auto">
           <h3 className="mb-3">Login</h3>
@@ -116,47 +143,60 @@ export default function ClientApp() {
         </form>
       )}
 
+      {/* DASHBOARD */}
       {view === "dashboard" && user && (
         <div>
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3>Olá, {user.name}</h3>
+            <h3>Olá, usuário {user.id}</h3>
             <button className="btn btn-danger btn-sm" onClick={logout}>
               Logout
             </button>
           </div>
 
-          <div className="meal-list">
-            {meals.length === 0 && <p>Nenhuma refeição encontrada.</p>}
-            {meals.map((meal) => (
-              <div key={meal.id} className="card mb-2 p-2">
-                <div>
-                  <strong>{meal.name}</strong> - R$ {meal.value}
-                </div>
-                <div>{meal.description}</div>
+          <h5>Lista de Clientes</h5>
+          {clients.length === 0 && <p>Nenhum cliente encontrado.</p>}
+          {clients.map((client) => (
+            <div key={client.id} className="card mb-2 p-3">
+              <strong>{client.nome}</strong> - CPF: {client.cpf}
+              <div>{client.email}</div>
+              <div className="mt-2 d-flex gap-2">
                 <button
-                  className="btn btn-success btn-sm mt-2"
-                  onClick={() => showQR(meal)}
+                  className="btn btn-success btn-sm"
+                  onClick={() => registrarRefeicao(client.id)}
+                >
+                  Registrar Refeição
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => showQR(client)}
                 >
                   Gerar QR Code
                 </button>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {selectedMeal && (
-        <div className="qr-modal text-center p-3 border rounded bg-light">
-          <h5>QR Code da refeição: {selectedMeal.name}</h5>
+      {/* MODAL QR CODE */}
+      {selectedClient && (
+        <div className="qr-modal text-center p-3 border rounded bg-light position-fixed top-50 start-50 translate-middle shadow-lg">
+          <h5>QR Code do cliente: {selectedClient.nome}</h5>
           <QRCodeCanvas
             value={JSON.stringify({
-              mealId: selectedMeal.id,
-              user: user.name,
+              clienteId: selectedClient.id,
+              userId: user.id,
               time: Date.now(),
             })}
             size={200}
           />
-          <div className="mt-2">
+          <div className="mt-3 d-flex justify-content-center gap-2">
+            <button
+              className="btn btn-success btn-sm"
+              onClick={() => registrarRefeicao(selectedClient.id)}
+            >
+              Registrar via QR
+            </button>
             <button className="btn btn-secondary btn-sm" onClick={closeQR}>
               Fechar
             </button>
