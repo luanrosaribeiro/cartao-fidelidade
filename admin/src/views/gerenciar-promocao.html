@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Promoções - Sistema de Fidelidade</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style/style.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-image: url('/assets/images/img1.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #f4f4f4;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background-color: #40159f;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(64, 29, 29, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        h1, h2 {
+            color: #d0d7df;
+        }
+
+        .secao {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        #logout-button {
+            background-color: #dc3545;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #40159f;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .close {
+            color: #fff;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #ddd;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-ativa {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .status-futura {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .status-expirada {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gerenciar Promoções</h1>
+            <button id="logout-button">Sair</button>
+        </div>
+
+        <!-- Formulário de Cadastro -->
+        <div class="secao">
+            <h2>Cadastrar Nova Promoção</h2>
+            <div id="mensagem-cadastro" class="alert"></div>
+            
+            <form id="form-promocao">
+                <label for="idRestaurante">Restaurante:</label>
+                <select id="idRestaurante" name="idRestaurante" required>
+                    <option value="">Selecione um restaurante...</option>
+                </select>
+
+                <label for="dt_inicio">Data de Início:</label>
+                <input type="date" id="dt_inicio" name="dt_inicio" required>
+
+                <label for="dt_final">Data Final:</label>
+                <input type="date" id="dt_final" name="dt_final" required>
+
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-success">Cadastrar</button>
+                    <a href="/dashboard" class="btn btn-secondary">Voltar</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de Promoções -->
+        <div class="secao">
+            <h2>Promoções Cadastradas</h2>
+            <div id="mensagem-lista" class="alert"></div>
+            <div id="lista-promocoes">
+                <p style="color: #fff;">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="modal-editar" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Editar Promoção</h2>
+            <div id="mensagem-editar" class="alert"></div>
+            <form id="form-editar">
+                <input type="hidden" id="edit-id">
+                
+                <label for="edit-idRestaurante">Restaurante:</label>
+                <select id="edit-idRestaurante" required>
+                    <option value="">Selecione um restaurante...</option>
+                </select>
+
+                <label for="edit-dt_inicio">Data de Início:</label>
+                <input type="date" id="edit-dt_inicio" required>
+
+                <label for="edit-dt_final">Data Final:</label>
+                <input type="date" id="edit-dt_final" required>
+
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/controler/logout.js"></script>
+    <script>
+        let restaurantes = [];
+
+        // Carregar restaurantes
+        async function carregarRestaurantes() {
+            try {
+                const response = await fetch('/cadastro/restaurante', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    restaurantes = data.data;
+                    
+                    const select1 = document.getElementById('idRestaurante');
+                    const select2 = document.getElementById('edit-idRestaurante');
+                    
+                    restaurantes.forEach(restaurante => {
+                        const option1 = document.createElement('option');
+                        option1.value = restaurante.id;
+                        option1.textContent = restaurante.nome;
+                        select1.appendChild(option1);
+
+                        const option2 = document.createElement('option');
+                        option2.value = restaurante.id;
+                        option2.textContent = restaurante.nome;
+                        select2.appendChild(option2);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar restaurantes:', error);
+            }
+        }
+
+        // Obter nome do restaurante
+        function getNomeRestaurante(id) {
+            const rest = restaurantes.find(r => r.id == id);
+            return rest ? rest.nome : 'N/A';
+        }
+
+        // Formatar data
+        function formatarData(dataStr) {
+            const data = new Date(dataStr);
+            return data.toLocaleDateString('pt-BR');
+        }
+
+        // Verificar status da promoção
+        function getStatusPromocao(dt_inicio, dt_final) {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            const inicio = new Date(dt_inicio);
+            const final = new Date(dt_final);
+            
+            if (hoje < inicio) {
+                return { texto: 'Futura', classe: 'status-futura' };
+            } else if (hoje > final) {
+                return { texto: 'Expirada', classe: 'status-expirada' };
+            } else {
+                return { texto: 'Ativa', classe: 'status-ativa' };
+            }
+        }
+
+        // Carregar lista de promoções
+        async function carregarPromocoes() {
+            try {
+                const response = await fetch('/cadastro/promocao', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const lista = document.getElementById('lista-promocoes');
+                    
+                    if (data.data.length === 0) {
+                        lista.innerHTML = '<p style="color: #fff;">Nenhuma promoção cadastrada.</p>';
+                        return;
+                    }
+                    
+                    let html = '<table><thead><tr><th>Restaurante</th><th>Data Início</th><th>Data Final</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    
+                    data.data.forEach(promo => {
+                        const status = getStatusPromocao(promo.dt_inicio, promo.dt_final);
+                        html += `
+                            <tr>
+                                <td>${getNomeRestaurante(promo.id_restaurante)}</td>
+                                <td>${formatarData(promo.dt_inicio)}</td>
+                                <td>${formatarData(promo.dt_final)}</td>
+                                <td><span class="status-badge ${status.classe}">${status.texto}</span></td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="abrirModalEditar(${promo.id}, ${promo.id_restaurante}, '${promo.dt_inicio}', '${promo.dt_final}')">Editar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deletarPromocao(${promo.id})">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    lista.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar promoções:', error);
+                document.getElementById('lista-promocoes').innerHTML = '<p style="color: #ff6b6b;">Erro ao carregar promoções.</p>';
+            }
+        }
+
+        // Cadastrar promoção
+        document.getElementById('form-promocao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const mensagem = document.getElementById('mensagem-cadastro');
+            
+            const dados = {
+                idRestaurante: document.getElementById('idRestaurante').value,
+                dt_inicio: document.getElementById('dt_inicio').value,
+                dt_final: document.getElementById('dt_final').value
+            };
+
+            // Validar datas
+            if (new Date(dados.dt_final) < new Date(dados.dt_inicio)) {
+                mensagem.className = 'alert alert-danger';
+                mensagem.textContent = 'A data final não pode ser anterior à data de início.';
+                mensagem.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/cadastro/promocao', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(dados)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mensagem.className = 'alert alert-success';
+                    mensagem.textContent = 'Promoção cadastrada com sucesso!';
+                    mensagem.style.display = 'block';
+                    document.getElementById('form-promocao').reset();
+                    carregarPromocoes();
+                    
+                    setTimeout(() => {
+                        mensagem.style.display = 'none';
+                    }, 3000);
+                } else {
+                    mensagem.className = 'alert alert-danger';
+                    mensagem.textContent = result.error || 'Erro ao cadastrar promoção.';
+                    mensagem.style.display = 'block';
+                }
+            } catch (error) {
+                mensagem.className = 'alert alert-danger';
+                mensagem.textContent = 'Erro ao cadastrar promoção. Tente novamente.';
+                mensagem.style.display = 'block';
+                console.error('Erro:', error);
+            }
+        });
+
+        // Abrir modal de edição
+        function abrirModalEditar(id, idRestaurante, dt_inicio, dt_final) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-idRestaurante').value = idRestaurante;
+            document.getElementById('edit-dt_inicio').value = dt_inicio.split('T')[0];
+            document.getElementById('edit-dt_final').value = dt_final.split('T')[0];
+            document.getElementById('modal-editar').style.display = 'block';
+        }
+
+        // Fechar modal
+        function fecharModal() {
+            document.getElementById('modal-editar').style.display = 'none';
+            document.getElementById('mensagem-editar').style.display = 'none';
+        }
+
+        document.querySelector('.close').onclick = fecharModal;
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-editar');
+            if (event.target == modal) {
+                fecharModal();
+            }
+        }
+
+        // Editar promoção
+        document.getElementById('form-editar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const mensagem = document.getElementById('mensagem-editar');
+            const id = document.getElementById('edit-id').value;
+            
+            const dados = {
+                idRestaurante: document.getElementById('edit-idRestaurante').value,
+                dt_inicio: document.getElementById('edit-dt_inicio').value,
+                dt_final: document.getElementById('edit-dt_final').value
+            };
+
+            // Validar datas
+            if (new Date(dados.dt_final) < new Date(dados.dt_inicio)) {
+                mensagem.className = 'alert alert-danger';
+                mensagem.textContent = 'A data final não pode ser anterior à data de início.';
+                mensagem.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/cadastro/promocao/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(dados)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mensagem.className = 'alert alert-success';
+                    mensagem.textContent = 'Promoção atualizada com sucesso!';
+                    mensagem.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        fecharModal();
+                        carregarPromocoes();
+                    }, 1500);
+                } else {
+                    mensagem.className = 'alert alert-danger';
+                    mensagem.textContent = result.error || 'Erro ao atualizar promoção.';
+                    mensagem.style.display = 'block';
+                }
+            } catch (error) {
+                mensagem.className = 'alert alert-danger';
+                mensagem.textContent = 'Erro ao atualizar promoção. Tente novamente.';
+                mensagem.style.display = 'block';
+                console.error('Erro:', error);
+            }
+        });
+
+        // Deletar promoção
+        async function deletarPromocao(id) {
+            if (!confirm('Tem certeza que deseja excluir esta promoção?')) {
+                return;
+            }
+
+            const mensagem = document.getElementById('mensagem-lista');
+
+            try {
+                const response = await fetch(`/cadastro/promocao/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mensagem.className = 'alert alert-success';
+                    mensagem.textContent = 'Promoção excluída com sucesso!';
+                    mensagem.style.display = 'block';
+                    carregarPromocoes();
+                    
+                    setTimeout(() => {
+                        mensagem.style.display = 'none';
+                    }, 3000);
+                } else {
+                    mensagem.className = 'alert alert-danger';
+                    mensagem.textContent = result.error || 'Erro ao excluir promoção.';
+                    mensagem.style.display = 'block';
+                }
+            } catch (error) {
+                mensagem.className = 'alert alert-danger';
+                mensagem.textContent = 'Erro ao excluir promoção. Tente novamente.';
+                mensagem.style.display = 'block';
+                console.error('Erro:', error);
+            }
+        }
+
+        // Carregar dados ao iniciar
+        async function inicializar() {
+            await carregarRestaurantes();
+            await carregarPromocoes();
+        }
+
+        inicializar();
+    </script>
+</body>
+
+</html>

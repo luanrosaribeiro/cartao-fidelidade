@@ -54,6 +54,19 @@ app.get('/log-sistema', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'log-sistema.html'));
 });
 
+// Novas rotas administrativas
+app.get('/cadastrar-usuario', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'views', 'cadastrar-usuario.html'));
+});
+
+app.get('/cadastrar-restaurante', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'views', 'cadastrar-restaurante.html'));
+});
+
+app.get('/gerenciar-promocao', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'views', 'gerenciar-promocao.html'));
+});
+
 //Rotas de Login
 app.post('/auth/login', async (req, res) => {
   try {
@@ -70,7 +83,7 @@ app.post('/auth/login', async (req, res) => {
       const sessionCookie = apiCookies.find(cookie => cookie.startsWith('connect.sid'));
       
       if (sessionCookie) {
-        req.session.apiSessionCookie = sessionCookie.split(';')[0]; // Salvar na sessão do admin
+        req.session.apiSessionCookie = sessionCookie.split(';')[0];
       }
     }
 
@@ -99,6 +112,14 @@ app.post('/auth/login', async (req, res) => {
       message: err.response?.data?.message || "Erro ao autenticar"
     });
   }
+});
+
+// Rota para verificar dados do usuário logado
+app.get('/auth/me', requireLogin, (req, res) => {
+  res.json({
+    success: true,
+    user: req.session.user
+  });
 });
 
 app.post('/auth/logout', (req, res) => {
@@ -306,6 +327,290 @@ app.post('/clientes/:id/resgatar', requireLogin, async (req, res) => {
     console.error("Erro ao resgatar cortesia:", err.response?.data || err.message);
     res.status(err.response?.status || 500).json({
       error: err.response?.data?.error || "Erro ao resgatar cortesia"
+    });
+  }
+});
+
+// ===== ROTAS ADMINISTRATIVAS =====
+
+// Cadastrar usuário (Admin, Caixa, Caixa Móvel)
+app.post('/cadastro', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({
+        error: "Sessão expirada. Faça login novamente."
+      });
+    }
+
+    const response = await axios.post(`${API_URL}/api/administrador`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao cadastrar usuário:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao cadastrar usuário"
+    });
+  }
+});
+
+// CRUD Restaurante
+app.post('/cadastro/restaurante', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({
+        error: "Sessão expirada. Faça login novamente."
+      });
+    }
+
+    const response = await axios.post(`${API_URL}/api/administrador/restaurante`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao cadastrar restaurante:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao cadastrar restaurante"
+    });
+  }
+});
+
+app.get('/cadastro/restaurante', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.get(`${API_URL}/api/administrador/restaurante`, {
+      withCredentials: true,
+      headers: {
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao listar restaurantes:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao buscar restaurantes"
+    });
+  }
+});
+
+app.put('/cadastro/restaurante/:id', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.put(`${API_URL}/api/administrador/restaurante/${req.params.id}`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao atualizar restaurante:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao atualizar restaurante"
+    });
+  }
+});
+
+app.delete('/cadastro/restaurante/:id', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.delete(`${API_URL}/api/administrador/restaurante/${req.params.id}`, {
+      withCredentials: true,
+      headers: {
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao deletar restaurante:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao deletar restaurante"
+    });
+  }
+});
+
+// CRUD Promoção
+app.post('/cadastro/promocao', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({
+        error: "Sessão expirada. Faça login novamente."
+      });
+    }
+
+    const response = await axios.post(`${API_URL}/api/administrador/promocao`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao cadastrar promoção:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao cadastrar promoção"
+    });
+  }
+});
+
+app.get('/cadastro/promocao', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.get(`${API_URL}/api/administrador/promocao`, {
+      withCredentials: true,
+      headers: {
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao listar promoções:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao buscar promoções"
+    });
+  }
+});
+
+app.put('/cadastro/promocao/:id', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.put(`${API_URL}/api/administrador/promocao/${req.params.id}`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao atualizar promoção:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao atualizar promoção"
+    });
+  }
+});
+
+app.delete('/cadastro/promocao/:id', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.delete(`${API_URL}/api/administrador/promocao/${req.params.id}`, {
+      withCredentials: true,
+      headers: {
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao deletar promoção:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao deletar promoção"
+    });
+  }
+});
+
+// Listar usuários
+app.get('/cadastro/usuario', requireLogin, async (req, res) => {
+  try {
+    const response = await axios.get(`${API_URL}/api/administrador/usuario`, {
+      withCredentials: true,
+      headers: { 'Cookie': req.session.apiSessionCookie }
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao buscar usuários"
+    });
+  }
+});
+
+// Atualizar usuário
+app.put('/cadastro/usuario/:id', requireLogin, async (req, res) => {
+  try {
+    const response = await axios.put(`${API_URL}/api/administrador/usuario/${req.params.id}`, req.body, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao atualizar usuário"
+    });
+  }
+});
+
+// Deletar usuário
+app.delete('/cadastro/usuario/:id', requireLogin, async (req, res) => {
+  try {
+    const response = await axios.delete(`${API_URL}/api/administrador/usuario/${req.params.id}`, {
+      withCredentials: true,
+      headers: { 'Cookie': req.session.apiSessionCookie }
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao deletar usuário"
+    });
+  }
+});
+
+app.get('/clientes/:id/refeicoes', requireLogin, async (req, res) => {
+  try {
+    if (!req.session.apiSessionCookie) {
+      return res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+    }
+
+    const response = await axios.get(`${API_URL}/api/clientes/${req.params.id}/refeicoes`, {
+      withCredentials: true,
+      headers: {
+        'Cookie': req.session.apiSessionCookie
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("Erro ao buscar refeições:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: err.response?.data?.error || "Erro ao buscar refeições"
     });
   }
 });

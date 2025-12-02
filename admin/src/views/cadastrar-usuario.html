@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Clientes - Sistema de Fidelidade</title>
+    <title>Gerenciar Usuários - Sistema de Fidelidade</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/style/style.css">
     
@@ -68,7 +68,7 @@
             font-weight: bold;
         }
 
-        input {
+        input, select {
             width: 100%;
             padding: 8px;
             margin-bottom: 15px;
@@ -105,10 +105,6 @@
 
         .btn-danger {
             background-color: #dc3545;
-        }
-
-        .btn-info {
-            background-color: #17a2b8;
         }
 
         .btn-sm {
@@ -205,6 +201,10 @@
             color: #ddd;
         }
 
+        #restaurante-field, #edit-restaurante-field {
+            display: none;
+        }
+
         .badge {
             padding: 5px 10px;
             border-radius: 3px;
@@ -212,17 +212,19 @@
             font-weight: bold;
         }
 
-        .badge-refeicoes {
-            background-color: #007bff;
+        .badge-admin {
+            background-color: #dc3545;
             color: white;
         }
 
-        .search-box {
-            margin-bottom: 15px;
+        .badge-caixa {
+            background-color: #28a745;
+            color: white;
         }
 
-        .search-box input {
-            margin-bottom: 0;
+        .badge-caixamovel {
+            background-color: #007bff;
+            color: white;
         }
     </style>
 </head>
@@ -230,16 +232,16 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Gerenciar Clientes</h1>
+            <h1>Gerenciar Usuários</h1>
             <button id="logout-button">Sair</button>
         </div>
 
         <!-- Formulário de Cadastro -->
         <div class="secao">
-            <h2>Cadastrar Novo Cliente</h2>
+            <h2>Cadastrar Novo Usuário</h2>
             <div id="mensagem-cadastro" class="alert"></div>
             
-            <form id="form-cliente">
+            <form id="form-usuario">
                 <label for="nome">Nome Completo:</label>
                 <input type="text" id="nome" name="nome" required>
 
@@ -249,27 +251,36 @@
                 <label for="telefone">Telefone:</label>
                 <input type="text" id="telefone" name="telefone" maxlength="15" placeholder="(00) 00000-0000" required>
 
-                <label for="email">E-mail (opcional):</label>
-                <input type="email" id="email" name="email">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+
+                <label for="tipo">Tipo de Usuário:</label>
+                <select id="tipo" name="tipo" required>
+                    <option value="">Selecione...</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="CAIXA">Caixa</option>
+                    <option value="CAIXAMOVEL">Caixa Móvel</option>
+                </select>
+
+                <div id="restaurante-field">
+                    <label for="idRestaurante">Restaurante:</label>
+                    <select id="idRestaurante" name="idRestaurante">
+                        <option value="">Selecione um restaurante...</option>
+                    </select>
+                </div>
 
                 <div style="margin-top: 20px;">
                     <button type="submit" class="btn btn-success">Cadastrar</button>
-                    <button type="button" class="btn btn-secondary" onclick="limparCampos()">Limpar Campos</button>
                     <a href="/dashboard" class="btn btn-secondary">Voltar</a>
                 </div>
             </form>
         </div>
 
-        <!-- Lista de Clientes -->
+        <!-- Lista de Usuários -->
         <div class="secao">
-            <h2>Clientes Cadastrados</h2>
+            <h2>Usuários Cadastrados</h2>
             <div id="mensagem-lista" class="alert"></div>
-            
-            <div class="search-box">
-                <input type="text" id="buscar-cliente" placeholder="Buscar por nome..." onkeyup="buscarCliente()">
-            </div>
-            
-            <div id="lista-clientes">
+            <div id="lista-usuarios">
                 <p style="color: #fff;">Carregando...</p>
             </div>
         </div>
@@ -279,7 +290,7 @@
     <div id="modal-editar" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Editar Cliente</h2>
+            <h2>Editar Usuário</h2>
             <div id="mensagem-editar" class="alert"></div>
             <form id="form-editar">
                 <input type="hidden" id="edit-id">
@@ -293,8 +304,23 @@
                 <label for="edit-telefone">Telefone:</label>
                 <input type="text" id="edit-telefone" maxlength="15" required>
 
-                <label for="edit-email">E-mail:</label>
-                <input type="email" id="edit-email">
+                <label for="edit-email">Email:</label>
+                <input type="email" id="edit-email" required>
+
+                <label for="edit-tipo">Tipo de Usuário:</label>
+                <select id="edit-tipo" required>
+                    <option value="">Selecione...</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="CAIXA">Caixa</option>
+                    <option value="CAIXAMOVEL">Caixa Móvel</option>
+                </select>
+
+                <div id="edit-restaurante-field">
+                    <label for="edit-idRestaurante">Restaurante:</label>
+                    <select id="edit-idRestaurante">
+                        <option value="">Selecione um restaurante...</option>
+                    </select>
+                </div>
 
                 <div style="margin-top: 20px;">
                     <button type="submit" class="btn btn-success">Salvar</button>
@@ -307,8 +333,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/controler/logout.js"></script>
     <script>
-        let clientesData = [];
-
         // Máscaras de formatação
         function formatarCPF(input) {
             input.addEventListener('input', function(e) {
@@ -338,97 +362,123 @@
         formatarCPF(document.getElementById('edit-cpf'));
         formatarTelefone(document.getElementById('edit-telefone'));
 
-        // Carregar lista de clientes
-        async function carregarClientes() {
+        // Carregar restaurantes
+        async function carregarRestaurantes() {
             try {
-                const response = await fetch('/clientes', {
+                const response = await fetch('/cadastro/restaurante', {
                     credentials: 'include'
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    clientesData = data.data || [];
+                    const selects = [
+                        document.getElementById('idRestaurante'),
+                        document.getElementById('edit-idRestaurante')
+                    ];
                     
-                    // Buscar refeições para cada cliente
-                    for (let cliente of clientesData) {
-                        try {
-                            const refResponse = await fetch(`/clientes/${cliente.id}/refeicoes`, {
-                                credentials: 'include'
-                            });
-                            if (refResponse.ok) {
-                                const refData = await refResponse.json();
-                                cliente.refeicoes_acumuladas = refData.total || 0;
-                            } else {
-                                cliente.refeicoes_acumuladas = 0;
-                            }
-                        } catch {
-                            cliente.refeicoes_acumuladas = 0;
+                    selects.forEach(select => {
+                        // Limpa opções existentes, mantendo apenas a primeira
+                        while (select.options.length > 1) {
+                            select.remove(1);
                         }
-                    }
-                    
-                    renderizarClientes(clientesData);
+                        
+                        data.data.forEach(restaurante => {
+                            const option = document.createElement('option');
+                            option.value = restaurante.id;
+                            option.textContent = restaurante.nome;
+                            select.appendChild(option);
+                        });
+                    });
                 }
             } catch (error) {
-                console.error('Erro ao carregar clientes:', error);
-                document.getElementById('lista-clientes').innerHTML = '<p style="color: #ff6b6b;">Erro ao carregar clientes.</p>';
+                console.error('Erro ao carregar restaurantes:', error);
             }
         }
 
-        // Renderizar tabela de clientes
-        function renderizarClientes(clientes) {
-            const lista = document.getElementById('lista-clientes');
+        // Mostrar campo de restaurante conforme o tipo
+        document.getElementById('tipo').addEventListener('change', function() {
+            const restauranteField = document.getElementById('restaurante-field');
+            const restauranteSelect = document.getElementById('idRestaurante');
             
-            if (clientes.length === 0) {
-                lista.innerHTML = '<p style="color: #fff;">Nenhum cliente cadastrado.</p>';
-                return;
+            if (this.value === 'CAIXA' || this.value === 'CAIXAMOVEL') {
+                restauranteField.style.display = 'block';
+                restauranteSelect.required = true;
+            } else {
+                restauranteField.style.display = 'none';
+                restauranteSelect.required = false;
+                restauranteSelect.value = '';
             }
+        });
+
+        document.getElementById('edit-tipo').addEventListener('change', function() {
+            const restauranteField = document.getElementById('edit-restaurante-field');
+            const restauranteSelect = document.getElementById('edit-idRestaurante');
             
-            let html = '<table><thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Refeições</th><th style="min-width: 280px;">Ações</th></tr></thead><tbody>';
-            
-            clientes.forEach(cliente => {
-                const email = cliente.email || '-';
-                const refeicoes = cliente.refeicoes_acumuladas || 0;
+            if (this.value === 'CAIXA' || this.value === 'CAIXAMOVEL') {
+                restauranteField.style.display = 'block';
+                restauranteSelect.required = true;
+            } else {
+                restauranteField.style.display = 'none';
+                restauranteSelect.required = false;
+                restauranteSelect.value = '';
+            }
+        });
+
+        // Carregar lista de usuários
+        async function carregarUsuarios() {
+            try {
+                const response = await fetch('/cadastro/usuario', {
+                    credentials: 'include'
+                });
                 
-                html += `
-                    <tr>
-                        <td>${cliente.nome}</td>
-                        <td>${cliente.cpf}</td>
-                        <td>${cliente.telefone}</td>
-                        <td>${email}</td>
-                        <td><span class="badge badge-refeicoes">${refeicoes}</span></td>
-                        <td style="white-space: nowrap;">
-                            <button class="btn btn-success btn-sm" onclick="registrarRefeicao(${cliente.id})" title="Registrar Refeição">➕</button>
-                            <button class="btn btn-info btn-sm" onclick="resgatarCortesia(${cliente.id})" title="Resgatar Cortesia" ${refeicoes < 10 ? 'disabled' : ''}>🎁</button>
-                            <button class="btn btn-warning btn-sm" onclick='abrirModalEditar(${JSON.stringify(cliente)})' title="Editar">✏️</button>
-                            <button class="btn btn-danger btn-sm" onclick="deletarCliente(${cliente.id})" title="Excluir">🗑️</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            lista.innerHTML = html;
+                if (response.ok) {
+                    const data = await response.json();
+                    const lista = document.getElementById('lista-usuarios');
+                    
+                    if (data.data.length === 0) {
+                        lista.innerHTML = '<p style="color: #fff;">Nenhum usuário cadastrado.</p>';
+                        return;
+                    }
+                    
+                    let html = '<table><thead><tr><th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th><th>Tipo</th><th>Restaurante</th><th>Ações</th></tr></thead><tbody>';
+                    
+                    data.data.forEach(user => {
+                        const tipoBadge = user.tipo === 'ADMIN' ? 'badge-admin' : 
+                                        user.tipo === 'CAIXA' ? 'badge-caixa' : 'badge-caixamovel';
+                        const tipoTexto = user.tipo === 'ADMIN' ? 'Admin' : 
+                                        user.tipo === 'CAIXA' ? 'Caixa' : 'Caixa Móvel';
+                        
+                        html += `
+                            <tr>
+                                <td>${user.nome}</td>
+                                <td>${user.cpf}</td>
+                                <td>${user.email}</td>
+                                <td>${user.telefone}</td>
+                                <td><span class="badge ${tipoBadge}">${tipoTexto}</span></td>
+                                <td>${user.restaurante_nome || '-'}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick='abrirModalEditar(${JSON.stringify(user)})'>Editar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deletarUsuario(${user.id})">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    lista.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                document.getElementById('lista-usuarios').innerHTML = '<p style="color: #ff6b6b;">Erro ao carregar usuários.</p>';
+            }
         }
 
-        // Buscar cliente por nome
-        function buscarCliente() {
-            const termo = document.getElementById('buscar-cliente').value.toLowerCase();
-            const clientesFiltrados = clientesData.filter(cliente => 
-                cliente.nome.toLowerCase().includes(termo)
-            );
-            renderizarClientes(clientesFiltrados);
-        }
-
-        // Limpar campos do formulário
-        function limparCampos() {
-            document.getElementById('form-cliente').reset();
-        }
-
-        // Cadastrar cliente
-        document.getElementById('form-cliente').addEventListener('submit', async (e) => {
+        // Cadastrar usuário
+        document.getElementById('form-usuario').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const mensagem = document.getElementById('mensagem-cadastro');
+            const tipo = document.getElementById('tipo').value;
             const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
             const telefone = document.getElementById('telefone').value.replace(/\D/g, '');
             
@@ -436,11 +486,22 @@
                 nome: document.getElementById('nome').value,
                 cpf: cpf,
                 telefone: telefone,
-                email: document.getElementById('email').value || null
+                email: document.getElementById('email').value,
+                tipo: tipo
             };
 
+            if (tipo === 'CAIXA' || tipo === 'CAIXAMOVEL') {
+                dados.idRestaurante = document.getElementById('idRestaurante').value;
+                if (!dados.idRestaurante) {
+                    mensagem.className = 'alert alert-danger';
+                    mensagem.textContent = 'Por favor, selecione um restaurante.';
+                    mensagem.style.display = 'block';
+                    return;
+                }
+            }
+
             try {
-                const response = await fetch('/clientes', {
+                const response = await fetch('/cadastro', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -453,34 +514,49 @@
 
                 if (result.success) {
                     mensagem.className = 'alert alert-success';
-                    mensagem.textContent = 'Cliente cadastrado com sucesso!';
+                    mensagem.textContent = 'Usuário cadastrado com sucesso! Senha padrão: 123456';
                     mensagem.style.display = 'block';
-                    document.getElementById('form-cliente').reset();
-                    carregarClientes();
+                    document.getElementById('form-usuario').reset();
+                    carregarUsuarios();
                     
                     setTimeout(() => {
                         mensagem.style.display = 'none';
                     }, 3000);
                 } else {
                     mensagem.className = 'alert alert-danger';
-                    mensagem.textContent = result.error || 'Erro ao cadastrar cliente.';
+                    mensagem.textContent = result.error || 'Erro ao cadastrar usuário.';
                     mensagem.style.display = 'block';
                 }
             } catch (error) {
                 mensagem.className = 'alert alert-danger';
-                mensagem.textContent = 'Erro ao cadastrar cliente. Tente novamente.';
+                mensagem.textContent = 'Erro ao cadastrar usuário. Tente novamente.';
                 mensagem.style.display = 'block';
                 console.error('Erro:', error);
             }
         });
 
         // Abrir modal de edição
-        function abrirModalEditar(cliente) {
-            document.getElementById('edit-id').value = cliente.id;
-            document.getElementById('edit-nome').value = cliente.nome;
-            document.getElementById('edit-cpf').value = cliente.cpf;
-            document.getElementById('edit-telefone').value = cliente.telefone;
-            document.getElementById('edit-email').value = cliente.email || '';
+        function abrirModalEditar(user) {
+            document.getElementById('edit-id').value = user.id;
+            document.getElementById('edit-nome').value = user.nome;
+            document.getElementById('edit-cpf').value = user.cpf;
+            document.getElementById('edit-telefone').value = user.telefone;
+            document.getElementById('edit-email').value = user.email;
+            document.getElementById('edit-tipo').value = user.tipo;
+            
+            const restauranteField = document.getElementById('edit-restaurante-field');
+            const restauranteSelect = document.getElementById('edit-idRestaurante');
+            
+            if (user.tipo === 'CAIXA' || user.tipo === 'CAIXAMOVEL') {
+                restauranteField.style.display = 'block';
+                restauranteSelect.required = true;
+                restauranteSelect.value = user.id_restaurante || '';
+            } else {
+                restauranteField.style.display = 'none';
+                restauranteSelect.required = false;
+                restauranteSelect.value = '';
+            }
+            
             document.getElementById('modal-editar').style.display = 'block';
         }
 
@@ -499,12 +575,13 @@
             }
         }
 
-        // Editar cliente
+        // Editar usuário
         document.getElementById('form-editar').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const mensagem = document.getElementById('mensagem-editar');
             const id = document.getElementById('edit-id').value;
+            const tipo = document.getElementById('edit-tipo').value;
             const cpf = document.getElementById('edit-cpf').value.replace(/\D/g, '');
             const telefone = document.getElementById('edit-telefone').value.replace(/\D/g, '');
             
@@ -512,11 +589,22 @@
                 nome: document.getElementById('edit-nome').value,
                 cpf: cpf,
                 telefone: telefone,
-                email: document.getElementById('edit-email').value || null
+                email: document.getElementById('edit-email').value,
+                tipo: tipo
             };
 
+            if (tipo === 'CAIXA' || tipo === 'CAIXAMOVEL') {
+                dados.idRestaurante = document.getElementById('edit-idRestaurante').value;
+                if (!dados.idRestaurante) {
+                    mensagem.className = 'alert alert-danger';
+                    mensagem.textContent = 'Por favor, selecione um restaurante.';
+                    mensagem.style.display = 'block';
+                    return;
+                }
+            }
+
             try {
-                const response = await fetch(`/clientes/${id}`, {
+                const response = await fetch(`/cadastro/usuario/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -529,36 +617,36 @@
 
                 if (result.success) {
                     mensagem.className = 'alert alert-success';
-                    mensagem.textContent = 'Cliente atualizado com sucesso!';
+                    mensagem.textContent = 'Usuário atualizado com sucesso!';
                     mensagem.style.display = 'block';
                     
                     setTimeout(() => {
                         fecharModal();
-                        carregarClientes();
+                        carregarUsuarios();
                     }, 1500);
                 } else {
                     mensagem.className = 'alert alert-danger';
-                    mensagem.textContent = result.error || 'Erro ao atualizar cliente.';
+                    mensagem.textContent = result.error || 'Erro ao atualizar usuário.';
                     mensagem.style.display = 'block';
                 }
             } catch (error) {
                 mensagem.className = 'alert alert-danger';
-                mensagem.textContent = 'Erro ao atualizar cliente. Tente novamente.';
+                mensagem.textContent = 'Erro ao atualizar usuário. Tente novamente.';
                 mensagem.style.display = 'block';
                 console.error('Erro:', error);
             }
         });
 
-        // Deletar cliente
-        async function deletarCliente(id) {
-            if (!confirm('Tem certeza que deseja excluir este cliente? Todos os dados do cartão fidelidade serão perdidos.')) {
+        // Deletar usuário
+        async function deletarUsuario(id) {
+            if (!confirm('Tem certeza que deseja excluir este usuário?')) {
                 return;
             }
 
             const mensagem = document.getElementById('mensagem-lista');
 
             try {
-                const response = await fetch(`/clientes/${id}`, {
+                const response = await fetch(`/cadastro/usuario/${id}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -567,108 +655,29 @@
 
                 if (result.success) {
                     mensagem.className = 'alert alert-success';
-                    mensagem.textContent = 'Cliente excluído com sucesso!';
+                    mensagem.textContent = 'Usuário excluído com sucesso!';
                     mensagem.style.display = 'block';
-                    carregarClientes();
+                    carregarUsuarios();
                     
                     setTimeout(() => {
                         mensagem.style.display = 'none';
                     }, 3000);
                 } else {
                     mensagem.className = 'alert alert-danger';
-                    mensagem.textContent = result.error || 'Erro ao excluir cliente.';
+                    mensagem.textContent = result.error || 'Erro ao excluir usuário.';
                     mensagem.style.display = 'block';
                 }
             } catch (error) {
                 mensagem.className = 'alert alert-danger';
-                mensagem.textContent = 'Erro ao excluir cliente. Tente novamente.';
+                mensagem.textContent = 'Erro ao excluir usuário. Tente novamente.';
                 mensagem.style.display = 'block';
                 console.error('Erro:', error);
             }
         }
 
-        // Registrar refeição
-        async function registrarRefeicao(id) {
-            if (!confirm('Confirma o registro de uma refeição para este cliente?')) {
-                return;
-            }
-
-            const mensagem = document.getElementById('mensagem-lista');
-
-            try {
-                const response = await fetch(`/clientes/${id}/registrar`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    mensagem.className = 'alert alert-success';
-                    mensagem.textContent = 'Refeição registrada com sucesso!';
-                    mensagem.style.display = 'block';
-                    
-                    // Recarrega a lista para atualizar a contagem
-                    await carregarClientes();
-                    
-                    setTimeout(() => {
-                        mensagem.style.display = 'none';
-                    }, 3000);
-                } else {
-                    mensagem.className = 'alert alert-danger';
-                    mensagem.textContent = result.error || 'Erro ao registrar refeição.';
-                    mensagem.style.display = 'block';
-                }
-            } catch (error) {
-                mensagem.className = 'alert alert-danger';
-                mensagem.textContent = 'Erro ao registrar refeição. Tente novamente.';
-                mensagem.style.display = 'block';
-                console.error('Erro:', error);
-            }
-        }
-
-        // Resgatar cortesia
-        async function resgatarCortesia(id) {
-            if (!confirm('Confirma o resgate da cortesia para este cliente? Isso irá zerar o contador de refeições.')) {
-                return;
-            }
-
-            const mensagem = document.getElementById('mensagem-lista');
-
-            try {
-                const response = await fetch(`/clientes/${id}/resgatar`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    mensagem.className = 'alert alert-success';
-                    mensagem.textContent = 'Cortesia resgatada com sucesso!';
-                    mensagem.style.display = 'block';
-                    
-                    // Recarrega a lista para atualizar a contagem
-                    await carregarClientes();
-                    
-                    setTimeout(() => {
-                        mensagem.style.display = 'none';
-                    }, 3000);
-                } else {
-                    mensagem.className = 'alert alert-danger';
-                    mensagem.textContent = result.error || 'Erro ao resgatar cortesia.';
-                    mensagem.style.display = 'block';
-                }
-            } catch (error) {
-                mensagem.className = 'alert alert-danger';
-                mensagem.textContent = 'Erro ao resgatar cortesia. Tente novamente.';
-                mensagem.style.display = 'block';
-                console.error('Erro:', error);
-            }
-        }
-
-        // Carregar clientes ao iniciar
-        carregarClientes();
+        // Carregar dados ao iniciar
+        carregarRestaurantes();
+        carregarUsuarios();
     </script>
 </body>
 

@@ -189,24 +189,121 @@
   });
 
   // Registrar Refeição
-  router.post('/:id/registrar', async (req, res) => {
+  // Registrar refeição com resgate automático ao atingir 10
+  router.post('/:id/registrar', requireLogin, async (req, res) => {
     var { id } = req.params;
     var client = await pool.connect();
 
     try {
-      var clienteRes = await client.query('SELECT id FROM cliente WHERE id_usuario = $1', [id]);
+      await client.query("BEGIN");
+
+      // Buscar cliente
+      var clienteRes = await client.query(
+        'SELECT id FROM cliente WHERE id_usuario = $1',
+        [id]
+      );
+
       if (clienteRes.rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
       }
-      var id = clienteRes.rows[0].id;
+
+      var clienteId = clienteRes.rows[0].id;
+
+      // Usuário logado
+      var usuarioLogadoId = req.session.userId;
+
+      // Buscar o caixa correspondente ao usuário logado
+      var caixaRes = await client.query(`
+        SELECT id, id_restaurante
+        FROM caixa
+        WHERE id_usuario = $1
+      `, [usuarioLogadoId]);
+
+      if (caixaRes.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ success: false, error: 'Usuário logado não é um caixa.' });
+      }
+
+      var idCaixa = caixaRes.rows[0].id;
+      var restauranteId = caixaRes.rows[0].id_restaurante;
+
+      // Inserir refeição normal
       await client.query(`
         INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
-        VALUES ($1, 2, FALSE)
-      `, [id]);
+        VALUES ($1, $2, FALSE)
+      `, [clienteId, idCaixa]);
 
-      return res.json({ success: true });
+      // Buscar promoção vigente
+      var promoRes = await client.query(`
+        SELECT id, dt_inicio, dt_final
+        FROM promocao
+        WHERE id_restaurante = $1
+          AND CURRENT_DATE BETWEEN dt_inicio AND dt_final
+        LIMIT 1
+      `, [restauranteId]);
+
+      if (promoRes.rows.length === 0) {
+        await client.query("COMMIT");
+        return res.json({
+          success: true,
+          message: "Refeição registrada. Nenhuma promoção vigente."
+        });
+      }
+
+      var promo = promoRes.rows[0];
+
+      // Contar refeições válidas na promoção
+      var countRes = await client.query(`
+        SELECT COUNT(*) AS total
+        FROM refeicao
+        WHERE id_cliente = $1
+          AND cortesia = FALSE
+          AND data BETWEEN $2 AND $3
+      `, [clienteId, promo.dt_inicio, promo.dt_final]);
+
+      var total = parseInt(countRes.rows[0].total);
+
+      // Se chegou a 10, resgata automaticamente
+      if (total > 10) {
+
+        // Remover as 10 refeições não cortesia mais antigas dentro da promoção
+        await client.query(`
+          DELETE FROM refeicao
+          WHERE id IN (
+            SELECT id FROM refeicao
+            WHERE id_cliente = $1
+              AND cortesia = FALSE
+              AND data BETWEEN $2 AND $3
+            ORDER BY data ASC, id ASC
+            LIMIT 10
+          )
+        `, [clienteId, promo.dt_inicio, promo.dt_final]);
+
+        // Inserir cortesia automática
+        await client.query(`
+          INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
+          VALUES ($1, $2, TRUE)
+        `, [clienteId, idCaixa]);
+
+        await client.query("COMMIT");
+
+        return res.json({
+          success: true,
+          message: "Refeição registrada e cortesia resgatada automaticamente!"
+        });
+      }
+
+      // Se não chegou a 10, apenas registra
+      await client.query("COMMIT");
+
+      return res.json({
+        success: true,
+        message: "Refeição registrada com sucesso."
+      });
 
     } catch (err) {
+      await client.query("ROLLBACK");
       console.error(err);
       return res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
     } finally {
@@ -214,39 +311,157 @@
     }
   });
 
-  // Resgatar cortesia
-  router.post('/:id/resgatar', requireLogin, async (req, res) => {
+
+  // Buscar refeições de um cliente específico
+  router.get('/:id/refeicoes', requireLogin, async (req, res) => {
     var { id } = req.params;
     var client = await pool.connect();
 
     try {
+      // Busca o id do cliente na tabela cliente
+      var clienteRes = await client.query('SELECT id FROM cliente WHERE id_usuario = $1', [id]);
+      
+      if (clienteRes.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
+      }
+      
+      var clienteId = clienteRes.rows[0].id;
+      
+      // Conta as refeições não cortesia dos últimos 30 dias
       var countRes = await client.query(`
-        SELECT COUNT(*) AS almocos_acumulados
+        SELECT COUNT(*) AS total
         FROM refeicao
         WHERE id_cliente = $1
           AND cortesia = FALSE
           AND data >= CURRENT_DATE - INTERVAL '30 days'
-      `, [id]);
+      `, [clienteId]);
 
-      var almocos_acumulados = parseInt(countRes.rows[0].almocos_acumulados);
-
-      if (almocos_acumulados >= 10) {
-        await client.query(`
-          INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
-          VALUES ($1, 1, TRUE)
-        `, [id]);
-
-        return res.json({ success: true });
-      } else {
-        return res.status(400).json({ success: false, error: 'Cliente ainda não tem direito à cortesia.' });
-      }
-
+      res.json({ 
+        success: true, 
+        total: parseInt(countRes.rows[0].total) 
+      });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
     } finally {
       client.release();
     }
   });
 
-  module.exports = router;
+  // Resgatar cortesia baseado na promoção vigente
+// Resgatar cortesia baseado na promoção vigente (com reset do contador)
+router.post('/:id/resgatar', requireLogin, async (req, res) => {
+  var { id } = req.params;
+  var client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Buscar cliente
+    var clienteRes = await client.query(
+      'SELECT id FROM cliente WHERE id_usuario = $1',
+      [id]
+    );
+
+    if (clienteRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado.' });
+    }
+
+    var clienteId = clienteRes.rows[0].id;
+
+    // Usuário logado
+    var usuarioLogadoId = req.session.userId;
+
+    // Buscar registro do caixa baseado no id_usuario
+    var caixaRes = await client.query(`
+      SELECT id, id_restaurante
+      FROM caixa
+      WHERE id_usuario = $1
+    `, [usuarioLogadoId]);
+
+    if (caixaRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ success: false, error: 'Usuário logado não é um caixa.' });
+    }
+
+    var idCaixa = caixaRes.rows[0].id;
+    var restauranteId = caixaRes.rows[0].id_restaurante;
+
+    // Buscar promoção vigente
+    var promoRes = await client.query(`
+      SELECT id, dt_inicio, dt_final 
+      FROM promocao
+      WHERE id_restaurante = $1
+        AND CURRENT_DATE BETWEEN dt_inicio AND dt_final
+      ORDER BY dt_inicio DESC
+      LIMIT 1
+    `, [restauranteId]);
+
+    if (promoRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhuma promoção vigente no momento.'
+      });
+    }
+
+    var promo = promoRes.rows[0];
+
+    // Contar refeições dentro da promoção
+    var countRes = await client.query(`
+      SELECT COUNT(*) AS almocos_acumulados
+      FROM refeicao
+      WHERE id_cliente = $1
+        AND cortesia = FALSE
+        AND data BETWEEN $2 AND $3
+    `, [clienteId, promo.dt_inicio, promo.dt_final]);
+
+    var almocos_acumulados = parseInt(countRes.rows[0].almocos_acumulados);
+
+    if (almocos_acumulados >= 10) {
+
+      // Inserir cortesia com id_caixa correto
+      await client.query(`
+        INSERT INTO refeicao (id_cliente, id_caixa, cortesia)
+        VALUES ($1, $2, TRUE)
+      `, [clienteId, idCaixa]);
+
+      // Deletar as 10 refeições NÃO cortesia mais antigas apenas dentro da promoção vigente
+      await client.query(`
+        DELETE FROM refeicao
+        WHERE id IN (
+          SELECT id FROM refeicao
+          WHERE id_cliente = $1
+            AND cortesia = FALSE
+            AND data BETWEEN $2 AND $3
+          ORDER BY data ASC, id ASC
+          LIMIT 10
+        )
+      `, [clienteId, promo.dt_inicio, promo.dt_final]);
+
+      await client.query("COMMIT");
+
+      return res.json({
+        success: true,
+        message: "Cortesia registrada com sucesso e contador zerado dentro da promoção!"
+      });
+
+    } else {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: `Cliente tem apenas ${almocos_acumulados} refeições na promoção vigente. São necessárias 10.`
+      });
+    }
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
+module.exports = router;
